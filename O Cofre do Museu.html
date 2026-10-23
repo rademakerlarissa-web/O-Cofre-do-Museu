@@ -1,0 +1,783 @@
+<!doctype html><html><head><meta charset=utf8><meta name=viewport content="width=device-width,initial-scale=1,viewport-fit=cover"><style>:root{color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}html{scroll-padding-top:env(safe-area-inset-top,0px)}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#fff;color:#000}img{max-width:100%}[hidden]:not([hidden=until-found i]){display:none!important}</style></head><body>
+<title>O Cofre do Museu</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700;800&family=Barlow:wght@400;500;600&family=JetBrains+Mono:wght@400;600&display=swap">
+<style>
+/* Layout: HUD fixo no topo, depois a pasta do caso em quatro fases verticais (cena, laboratório, interrogatório, veredito). Visual escuro de jogo de investigação, com fita de isolamento e marcadores de evidência. */
+:root{
+  --bg:#08141e; --hud:#050e17; --panel:#0f2232; --panel-2:#153049; --line:#25496a;
+  --ink:#e8f0f7; --muted:#92a9bd; --gold:#f5b82e; --gold-deep:#a87a0c; --gold-ink:#1b1402;
+  --red:#ef5350; --green:#3dc78e;
+  --f-display:'Barlow Condensed','Arial Narrow',Impact,sans-serif;
+  --f-body:'Barlow','Segoe UI',system-ui,sans-serif;
+  --f-mono:'JetBrains Mono',ui-monospace,Consolas,monospace;
+  color-scheme:dark;
+}
+*{box-sizing:border-box}
+body{margin:0;background-color:var(--bg);color:var(--ink);font:16px/1.55 var(--f-body);
+  background-image:linear-gradient(rgba(37,73,106,.16) 1px,transparent 1px),linear-gradient(90deg,rgba(37,73,106,.16) 1px,transparent 1px);background-size:44px 44px}
+body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset-top,0px);background:var(--hud);z-index:10}
+.in{max-width:1040px;margin:0 auto;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+h1,h2,h3{font-family:var(--f-display);text-transform:uppercase;letter-spacing:.03em;margin:0;line-height:1.05;text-wrap:balance}
+p{margin:0}
+:focus-visible{outline:2px solid var(--gold);outline-offset:2px}
+.mono{font-family:var(--f-mono)}
+
+/* HUD */
+.hud{position:sticky;top:env(safe-area-inset-top,0px);z-index:9;background:var(--hud);border-bottom:2px solid var(--gold)}
+.hud-in{display:flex;align-items:center;justify-content:space-between;gap:12px 20px;flex-wrap:wrap;padding-block:10px}
+.hud-case{display:flex;flex-direction:column;min-width:0}
+.hud-case small{font:600 12px var(--f-display);letter-spacing:.18em;color:var(--gold);text-transform:uppercase}
+.hud-case strong{font:700 22px var(--f-display);letter-spacing:.04em;text-transform:uppercase}
+.hud-score{display:flex;align-items:center;gap:12px}
+.stars{display:flex;gap:3px;font-size:24px;line-height:1}
+.star{color:#27425a;transition:color .3s,transform .3s}
+.star.on{color:var(--gold);transform:scale(1.08)}
+.hud-count{font:700 18px var(--f-display);letter-spacing:.06em;color:var(--muted);min-width:3.2em;text-align:right}
+.bar{height:4px;background:#12283a}
+.bar i{display:block;height:100%;width:0;background:var(--gold);transition:width .4s}
+
+.tape{height:16px;background:repeating-linear-gradient(-45deg,var(--gold) 0 16px,#0b0b0b 16px 32px)}
+
+/* Hero */
+.hero{padding-block:40px 28px}
+.hero-grid{display:grid;grid-template-columns:minmax(0,1.5fr) minmax(0,1fr);gap:28px 40px;align-items:center}
+.eyebrow{font:700 14px var(--f-display);letter-spacing:.2em;text-transform:uppercase;color:var(--gold)}
+.hero h1{font-size:clamp(46px,9vw,92px);font-weight:800;margin:6px 0 14px}
+.lead{font-size:18px;max-width:56ch;color:#cfdbe6}
+.vault{justify-self:center;width:min(100%,260px)}
+.vault svg{width:100%;height:auto;display:block}
+.v-frame{fill:var(--panel-2);stroke:var(--line);stroke-width:3}
+.v-door{fill:var(--panel);stroke:var(--gold);stroke-width:4}
+.v-ring{fill:none;stroke:var(--line);stroke-width:2}
+.v-tick{stroke:var(--muted);stroke-width:2}
+.v-bolt{fill:var(--line)}
+.v-hub{fill:var(--gold);stroke:var(--gold-deep);stroke-width:3}
+.v-arm{stroke:var(--gold-ink);stroke-width:6;stroke-linecap:round}
+.dial{transform-origin:100px 100px;transition:transform 1.4s cubic-bezier(.3,.7,.2,1)}
+.vault:hover .dial{transform:rotate(150deg)}
+
+/* Ficha */
+.file{margin-top:28px;background:var(--panel);border:1px solid var(--line);border-radius:4px}
+.file-head{display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap;padding:10px 16px;border-bottom:1px solid var(--line);background:var(--panel-2)}
+.file-head span{font:700 13px var(--f-display);letter-spacing:.18em;text-transform:uppercase;color:var(--gold)}
+.file dl{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:14px 24px;margin:0;padding:16px}
+.file dt{font:600 12px var(--f-display);letter-spacing:.16em;text-transform:uppercase;color:var(--muted)}
+.file dd{margin:2px 0 0;font-weight:500}
+.file .q{grid-column:1/-1;padding-top:12px;border-top:1px dashed var(--line);font-size:18px}
+.file .q b{color:var(--gold);font-weight:600}
+
+/* Objetivos */
+.goals{margin-top:20px;display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:10px;padding:0;list-style:none}
+.goals li{display:flex;gap:10px;align-items:flex-start;padding:10px 12px;background:rgba(15,34,50,.8);border:1px solid var(--line);border-radius:4px;font-size:15px;min-width:0}
+.goals .ck{flex:none;width:22px;height:22px;border:2px solid var(--line);border-radius:50%;display:grid;place-items:center;font-size:13px;color:transparent;margin-top:1px}
+.goals li.done{border-color:var(--green)}
+.goals li.done .ck{background:var(--green);border-color:var(--green);color:#04281a;font-weight:800}
+.goals small{display:block;color:var(--muted);font-size:13px}
+
+/* Fases */
+.phase{padding-block:44px 8px}
+.phase-head{display:flex;flex-direction:column;gap:6px;margin-bottom:20px}
+.phase-head h2{font-size:clamp(30px,5vw,44px);font-weight:800}
+.phase-head p{color:var(--muted);max-width:68ch}
+
+.syms{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:18px}
+.sym{display:inline-flex;align-items:center;gap:8px;padding:6px 12px 6px 6px;background:var(--panel);border:1px solid var(--line);border-radius:999px;font-size:14px}
+.sym b{display:grid;place-items:center;width:28px;height:28px;border-radius:50%;background:var(--gold);color:var(--gold-ink);font:700 15px var(--f-mono)}
+
+/* Pistas */
+.ev-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,440px),1fr));gap:14px}
+.ev{background:var(--panel);border:1px solid var(--line);border-radius:4px;padding:16px;display:flex;flex-direction:column;gap:12px;min-width:0}
+.ev-top{display:flex;gap:14px;align-items:flex-start}
+.tent{flex:none;width:36px;height:40px;background:var(--gold);color:var(--gold-ink);clip-path:polygon(50% 0,100% 100%,0 100%);display:grid;align-items:end;justify-items:center;padding-bottom:5px;font:800 17px var(--f-display)}
+.ev-txt{font-size:18px;line-height:1.4;min-width:0}
+.ev-btn{align-self:flex-start}
+.ev-detail{display:none;border-top:1px dashed var(--line);padding-top:12px;gap:8px;flex-direction:column}
+.ev.open .ev-detail{display:flex}
+.row{display:grid;grid-template-columns:96px minmax(0,1fr);gap:10px;align-items:baseline}
+.row span:first-child{font:600 12px var(--f-display);letter-spacing:.14em;text-transform:uppercase;color:var(--muted)}
+.row code{font-family:var(--f-mono);font-size:15px;color:var(--gold);overflow-wrap:anywhere}
+.ev .note{font-size:14px;color:#b9c9d7}
+.ev.seen{border-color:#4a6d27}
+.badge{font:700 12px var(--f-display);letter-spacing:.14em;text-transform:uppercase;color:var(--green);display:none}
+.ev.seen .badge{display:inline}
+
+/* Botões */
+.btn{font:700 15px var(--f-display);letter-spacing:.08em;text-transform:uppercase;background:var(--gold);color:var(--gold-ink);border:0;border-radius:3px;padding:10px 16px;box-shadow:0 3px 0 var(--gold-deep);cursor:pointer;transition:transform .08s,box-shadow .08s}
+.btn:hover{filter:brightness(1.07)}
+.btn:active{transform:translateY(2px);box-shadow:0 1px 0 var(--gold-deep)}
+.btn:disabled{opacity:.4;cursor:not-allowed;box-shadow:none;transform:none;filter:none}
+.btn.ghost{background:transparent;color:var(--gold);border:1.5px solid var(--gold);box-shadow:none;padding:8.5px 14.5px}
+.btn.ghost:active{transform:none}
+
+/* Laboratório */
+.lab{background:var(--panel);border:1px solid var(--line);border-radius:4px;padding:18px;display:flex;flex-direction:column;gap:16px}
+.goal{display:flex;gap:14px 20px;flex-wrap:wrap;align-items:center;justify-content:space-between}
+.goal p{max-width:62ch}
+.goal b{color:var(--gold);font-weight:600}
+.clauses{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(100%,210px),1fr));gap:10px}
+.cl{all:unset;box-sizing:border-box;cursor:pointer;display:flex;flex-direction:column;gap:4px;padding:10px 12px;background:var(--panel-2);border:2px solid var(--line);border-radius:4px;min-width:0}
+.cl:hover{border-color:#3d6c96}
+.cl:focus-visible{outline:2px solid var(--gold);outline-offset:2px}
+.cl .id{font:700 12px var(--f-display);letter-spacing:.14em;text-transform:uppercase;color:var(--muted)}
+.cl .lits{font:600 18px var(--f-mono);overflow-wrap:anywhere}
+.cl.sel{border-color:var(--gold);background:#2a2410}
+.cl.hint{animation:pulse 1s ease-in-out 3}
+.cl.new{border-color:var(--green)}
+.cl.neg{border-color:#c0603a}
+.cl .id i{font-style:normal;color:var(--gold)}
+@keyframes pulse{50%{box-shadow:0 0 0 4px rgba(245,184,46,.5)}}
+.pairbox{font-size:15px;padding:10px 12px;border:1px dashed var(--line);border-radius:4px;color:#cfdbe6}
+.actions{display:flex;flex-wrap:wrap;gap:10px}
+.msg{min-height:1.5em;font-size:15px;padding-left:12px;border-left:3px solid var(--line);color:#cfdbe6}
+.msg.ok{border-color:var(--green);color:#bdf0d8}
+.msg.bad{border-color:var(--red);color:#ffc9c7}
+.msg.warn{border-color:var(--gold);color:#ffe6a6}
+.tw{overflow-x:auto;border:1px solid var(--line);border-radius:4px}
+table{border-collapse:collapse;width:100%;font-size:15px}
+th,td{padding:9px 12px;text-align:left;border-bottom:1px solid var(--line);vertical-align:top}
+th{font:700 12px var(--f-display);letter-spacing:.14em;text-transform:uppercase;color:var(--muted);background:var(--panel-2);white-space:nowrap}
+tr:last-child td{border-bottom:0}
+td.m{font-family:var(--f-mono);font-size:14px;white-space:nowrap}
+td.nl{min-width:240px;color:#cfdbe6}
+td.empty{color:var(--muted);text-align:center;padding:18px}
+
+/* Valoração */
+.val{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,420px),1fr));gap:16px}
+.pan{background:var(--panel);border:1px solid var(--line);border-radius:4px;padding:16px;display:flex;flex-direction:column;gap:12px;min-width:0}
+.pan h3{font-size:20px;color:var(--gold)}
+.sw{all:unset;box-sizing:border-box;cursor:pointer;display:grid;grid-template-columns:auto minmax(0,1fr) auto;gap:12px;align-items:center;padding:10px 12px;background:var(--panel-2);border:1px solid var(--line);border-radius:4px}
+.sw:focus-visible{outline:2px solid var(--gold);outline-offset:2px}
+.sw b{display:grid;place-items:center;width:30px;height:30px;border-radius:50%;background:var(--gold);color:var(--gold-ink);font:700 15px var(--f-mono)}
+.sw span{font-size:15px}
+.sw em{font:800 20px var(--f-display);font-style:normal;letter-spacing:.06em;min-width:2.4em;text-align:center;padding:2px 10px;border-radius:3px;background:#3a1a1b;color:#ffb1af}
+.sw[aria-checked="true"] em{background:#123a2b;color:#8ff0c3}
+.presets{display:flex;flex-wrap:wrap;gap:8px}
+.chk{display:flex;flex-direction:column;gap:8px}
+.cr{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:10px;align-items:center;padding:8px 12px;border:1px solid var(--line);border-radius:4px;background:var(--panel-2)}
+.cr .lb{display:flex;flex-wrap:wrap;gap:6px 8px;align-items:center;min-width:0}
+.cr .lb small{font:700 12px var(--f-display);letter-spacing:.12em;color:var(--muted);text-transform:uppercase}
+.lit{font:600 15px var(--f-mono);padding:2px 8px;border-radius:3px;background:#2a1718;color:#ff9f9d}
+.lit.t{background:#123a2b;color:#8ff0c3}
+.cr .st{font:800 15px var(--f-display);letter-spacing:.1em;text-transform:uppercase;color:var(--red)}
+.cr.ok{border-color:#2d7a5b}
+.cr.ok .st{color:var(--green)}
+.verd{font-size:16px;padding:12px 14px;border-radius:4px;border:1px solid var(--line);background:var(--panel-2)}
+.verd.ok{border-color:var(--green);color:#bdf0d8}
+details.tt{margin-top:16px;background:var(--panel);border:1px solid var(--line);border-radius:4px}
+details.tt>summary,details.rep>summary{cursor:pointer;padding:12px 16px;font:700 16px var(--f-display);letter-spacing:.1em;text-transform:uppercase;list-style:none}
+details.tt>summary::-webkit-details-marker,details.rep>summary::-webkit-details-marker{display:none}
+details.tt>summary::before,details.rep>summary::before{content:"+";display:inline-block;width:1.2em;color:var(--gold)}
+details[open]>summary::before{content:"\2212"}
+.tt .tw{margin:0 16px 16px}
+.tt td,.tt th{text-align:center;padding:6px 10px;font-family:var(--f-mono);font-size:14px}
+.tt th{font-family:var(--f-display)}
+.tt tr.model td{background:#123a2b;color:#8ff0c3}
+.tt tr.cur td{box-shadow:inset 0 2px 0 var(--gold),inset 0 -2px 0 var(--gold)}
+.no{color:#ff9f9d}.yes{color:#8ff0c3}
+.tt p.cap{padding:0 16px 12px;color:var(--muted);font-size:14px}
+.tt tr[data-m]{cursor:pointer}
+.tt tr[data-m]:hover td{background:#18334b}
+.tt tr.model:hover td{background:#17503b}
+.tt tr[data-m]:focus-visible{outline:2px solid var(--gold);outline-offset:-2px}
+.tt td.car{color:var(--gold);width:2em}
+.tt tr.open td{border-bottom-color:transparent}
+.tt td.exp-c{text-align:left;font-family:var(--f-body);font-size:15px;padding:0;background:var(--panel-2)}
+.expl{display:flex;flex-direction:column;gap:10px;padding:16px}
+.expl p{margin:0}
+.ex-i{border:1px solid var(--line);border-radius:4px;padding:10px 12px;display:flex;flex-direction:column;gap:4px;background:var(--panel)}
+.ex-i.ok{border-color:#2d7a5b}
+.ex-i.no{border-color:#8a3a3c}
+.ex-t{display:flex;flex-wrap:wrap;gap:4px 12px;align-items:baseline}
+.ex-t strong{font-family:var(--f-mono);font-size:15px}
+.ex-n{font:600 12px var(--f-display);letter-spacing:.14em;text-transform:uppercase;color:var(--muted)}
+.ex-t .st{margin-left:auto;font:800 14px var(--f-display);letter-spacing:.1em;text-transform:uppercase}
+.ex-i.ok .st{color:var(--green)}
+.ex-i.no .st{color:var(--red)}
+.ex-q{color:#b9c9d7;font-style:italic}
+.expl code{font-family:var(--f-mono);color:var(--gold)}
+.ex-b{color:#ffc9c7}
+.ex-v{padding:10px 12px;border-radius:4px;border:1px solid var(--line)}
+.ex-v.ok{border-color:var(--green);color:#bdf0d8}
+.ex-v.no{border-color:var(--red);color:#ffc9c7}
+.sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+
+/* Veredito */
+.verdict{display:grid;grid-template-columns:minmax(0,1.4fr) minmax(0,1fr);gap:20px 32px;align-items:start}
+.verdict h3{font-size:clamp(26px,4vw,36px);margin-bottom:14px}
+.verdict ul{margin:0;padding:0;list-style:none;display:flex;flex-direction:column;gap:12px}
+.verdict li{padding-left:16px;border-left:3px solid var(--gold)}
+.verdict li.caveat{border-color:var(--muted);color:#b9c9d7;font-size:15px}
+.stampbox{display:flex;flex-direction:column;align-items:center;gap:14px;padding:20px 12px;background:var(--panel);border:1px solid var(--line);border-radius:4px;min-width:0}
+.stamp{font:800 clamp(26px,5vw,34px) var(--f-display);letter-spacing:.08em;text-transform:uppercase;text-align:center;padding:10px 18px;border:4px double #4b5f70;color:#4b5f70;transform:rotate(-6deg);line-height:1.1}
+.stamp small{display:block;font:600 13px var(--f-display);letter-spacing:.2em}
+.stampbox.on .stamp{border-color:var(--red);color:var(--red);animation:slam .5s cubic-bezier(.2,1.4,.4,1) both}
+@keyframes slam{from{transform:rotate(-6deg) scale(2.2);opacity:0}to{transform:rotate(-6deg) scale(1);opacity:1}}
+.model{display:flex;flex-wrap:wrap;gap:8px;justify-content:center}
+.model span{font:600 15px var(--f-mono);padding:4px 10px;background:#123a2b;color:#8ff0c3;border-radius:3px}
+.stampbox p{font-size:14px;color:var(--muted);text-align:center}
+
+details.rep{margin-top:16px;background:var(--panel);border:1px solid var(--line);border-radius:4px}
+.rep-body{padding:0 16px 16px;display:flex;flex-direction:column;gap:10px}
+.rep-body p b{font-family:var(--f-display);letter-spacing:.08em;text-transform:uppercase;color:var(--gold);font-weight:700}
+pre.reg{margin:0;padding:14px;background:#050e17;border:1px solid var(--line);border-radius:4px;font:13px/1.55 var(--f-mono);overflow-x:auto;white-space:pre;color:#d6e3ee}
+.copyrow{display:flex;gap:12px;align-items:center;flex-wrap:wrap;margin-top:12px}
+.copyrow span{font-size:14px;color:var(--green)}
+footer{padding-block:40px 56px;color:var(--muted);font-size:14px}
+footer a{color:var(--gold)}
+
+@media (max-width:760px){
+  .hero-grid,.verdict{grid-template-columns:1fr}
+  .vault{width:150px;justify-self:start;order:-1}
+  .row{grid-template-columns:1fr;gap:2px}
+  .hero{padding-top:28px}
+}
+@media (prefers-reduced-motion:reduce){
+  *{animation:none!important;transition:none!important}
+}
+</style>
+
+<header class="hud">
+  <div class="in hud-in">
+    <div class="hud-case"><small>Caso nº 03</small><strong>O Cofre do Museu</strong></div>
+    <div class="hud-score" aria-live="polite">
+      <div class="stars" id="stars" aria-hidden="true"></div>
+      <div class="hud-count" id="count">0/5</div>
+    </div>
+  </div>
+  <div class="bar" aria-hidden="true"><i id="bar"></i></div>
+</header>
+<div class="tape" aria-hidden="true"></div>
+
+<main>
+<section class="hero">
+  <div class="in">
+    <div class="hero-grid">
+      <div>
+        <div class="eyebrow">Dossiê 3 · Será que há contradição?</div>
+        <h1>O Cofre do Museu</h1>
+        <p class="lead">O cofre onde o museu guardava a coleira de ouro da Estrela foi encontrado aberto. O chefe da segurança garante que foi arrombamento, mas a perícia tem dúvidas.</p>
+      </div>
+      <div class="vault" aria-hidden="true">
+        <svg viewBox="0 0 200 200" id="vsvg">
+          <rect class="v-frame" x="8" y="8" width="184" height="184" rx="10"/>
+          <circle class="v-bolt" cx="24" cy="24" r="5"/><circle class="v-bolt" cx="176" cy="24" r="5"/>
+          <circle class="v-bolt" cx="24" cy="176" r="5"/><circle class="v-bolt" cx="176" cy="176" r="5"/>
+          <circle class="v-door" cx="100" cy="100" r="74"/>
+          <circle class="v-ring" cx="100" cy="100" r="62"/>
+          <g class="dial" id="dial">
+            <g id="ticks"></g>
+            <circle class="v-hub" cx="100" cy="100" r="22"/>
+            <line class="v-arm" x1="100" y1="100" x2="100" y2="82"/>
+          </g>
+        </svg>
+      </div>
+    </div>
+
+    <div class="file">
+      <div class="file-head"><span>Ficha do caso</span><span>Aberto</span></div>
+      <dl>
+        <div><dt>Objeto</dt><dd>Coleira de ouro da Estrela</dd></div>
+        <div><dt>Local</dt><dd>Cofre do museu</dd></div>
+        <div><dt>Estado</dt><dd>Encontrado aberto</dd></div>
+        <div><dt>Versão do chefe da segurança</dt><dd>Foi arrombamento</dd></div>
+        <div><dt>Posição da perícia</dt><dd>Tem dúvidas</dd></div>
+        <div class="q"><dt>Pergunta do caso</dt><dd>As pistas provam que o cofre foi <b>arrombado</b>? Neguem essa conclusão, apliquem resolução e vejam se aparece <b>□</b>.</dd></div>
+      </dl>
+    </div>
+
+    <ul class="goals" id="goals" aria-label="Objetivos da investigação"></ul>
+  </div>
+</section>
+
+<section class="phase" id="fase1">
+  <div class="in">
+    <div class="phase-head">
+      <div class="eyebrow">Fase 1 · Cena do crime</div>
+      <h2>As quatro pistas</h2>
+      <p>Examine cada pista para ver a tradução em lógica e a cláusula correspondente.</p>
+    </div>
+    <div class="syms">
+      <span class="sym"><b>K</b>o cofre foi aberto com a chave</span>
+      <span class="sym"><b>F</b>o cofre foi arrombado</span>
+      <span class="sym"><b>A</b>o alarme foi desativado</span>
+      <span class="sym"><b>S</b>o segurança estava de plantão</span>
+    </div>
+    <div class="ev-grid" id="evgrid"></div>
+  </div>
+</section>
+
+<section class="phase" id="fase2">
+  <div class="in">
+    <div class="phase-head">
+      <div class="eyebrow">Fase 2 · Laboratório</div>
+      <h2>Resolução, um par por vez</h2>
+      <p>Escolha duas cláusulas com literais complementares e aplique a regra. O resolvente junta o que sobrou das duas, sem o par cancelado. Continue até não surgirem resolventes novos.</p>
+    </div>
+    <div class="lab">
+      <div class="goal">
+        <p>Conclusão a testar: <b>F</b>, “o cofre foi arrombado”. Na prova por refutação, a conclusão entra negada: <b class="mono">{¬F}</b>.</p>
+        <button class="btn" id="btnNeg" type="button">Negar a conclusão</button>
+      </div>
+      <div class="clauses" id="clauses" role="group" aria-label="Conjunto de cláusulas"></div>
+      <div class="pairbox" id="pairbox" aria-live="polite"></div>
+      <div class="actions">
+        <button class="btn" id="btnApply" type="button">Aplicar resolução</button>
+        <button class="btn ghost" id="btnHint" type="button">Dica</button>
+        <button class="btn ghost" id="btnSat" type="button">Verificar saturação</button>
+        <button class="btn ghost" id="btnAuto" type="button">Mostrar solução completa</button>
+        <button class="btn ghost" id="btnReset" type="button">Reiniciar</button>
+      </div>
+      <div class="msg" id="msg" role="status" aria-live="polite"></div>
+      <div class="tw">
+        <table>
+          <thead><tr><th>Passo</th><th>Cláusulas cruzadas</th><th>Literal cancelado</th><th>Resolvente</th><th>Em linguagem natural</th></tr></thead>
+          <tbody id="logbody"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="phase" id="fase3">
+  <div class="in">
+    <div class="phase-head">
+      <div class="eyebrow">Fase 3 · Interrogatório</div>
+      <h2>Existe uma valoração?</h2>
+      <p>Sem □, o caso é satisfatível. Mude os valores de K, F, A e S até todas as cláusulas ficarem verdadeiras. A versão do chefe da segurança já vem carregada.</p>
+    </div>
+    <div class="val">
+      <div class="pan">
+        <h3>Valores de verdade</h3>
+        <div class="presets">
+          <button class="btn ghost" type="button" id="pChief">Versão do chefe</button>
+          <button class="btn ghost" type="button" id="pFalse">Tudo falso</button>
+        </div>
+        <div id="switches" style="display:flex;flex-direction:column;gap:8px"></div>
+      </div>
+      <div class="pan">
+        <h3>Cláusulas sob esta valoração</h3>
+        <div class="chk" id="chk"></div>
+        <div class="verd" id="verd" aria-live="polite"></div>
+      </div>
+    </div>
+    <details class="tt" open>
+      <summary>As 16 valorações possíveis</summary>
+      <p class="cap">Cada linha é uma combinação de K, F, A e S. As colunas (1) a (5) dizem se a cláusula é verdadeira. A linha verde é a única que satisfaz todas. A borda amarela marca a linha que corresponde aos valores das chaves acima, e acompanha cada mudança que você fizer nelas. Clique em uma linha para ver a explicação completa dela.</p>
+      <div class="tw"><table id="tt"></table></div>
+    </details>
+  </div>
+</section>
+
+<section class="phase" id="fase4">
+  <div class="in">
+    <div class="phase-head">
+      <div class="eyebrow">Fase 4 · Veredito</div>
+      <h2>Fechamento do caso</h2>
+    </div>
+    <div class="verdict">
+      <div>
+        <h3>As pistas provam o arrombamento? Não.</h3>
+        <ul>
+          <li>O conjunto é <b>satisfatível</b>. Não surgiu □, e existe uma valoração que torna as cláusulas (1) a (5) verdadeiras.</li>
+          <li>As próprias pistas implicam <b class="mono">¬F</b>. O segurança estava de plantão, então o alarme não foi desativado, e arrombar exigiria desativar o alarme.</li>
+          <li>Sobra a chave: <b class="mono">K</b> é verdadeiro. A versão do chefe da segurança contradiz as evidências, e a dúvida da perícia faz sentido.</li>
+          <li class="caveat">Satisfatível quer dizer que as pistas são compatíveis entre si, não que sejam verdadeiras. A lógica não diz quem tinha a chave.</li>
+        </ul>
+      </div>
+      <div class="stampbox" id="stampbox">
+        <div class="stamp" id="stamp"><small>Investigação</small>em andamento</div>
+        <div class="model" aria-label="Valoração que satisfaz as pistas"><span>K = V</span><span>F = F</span><span>A = F</span><span>S = V</span></div>
+        <p id="stampnote">Cumpra os cinco objetivos para carimbar o caso.</p>
+      </div>
+    </div>
+
+    <details class="rep">
+      <summary>Roteiro das oito perguntas da apresentação</summary>
+      <div class="rep-body">
+        <p><b>1. Proposições.</b> K (aberto com a chave), F (arrombado), A (alarme desativado), S (segurança de plantão).</p>
+        <p><b>2. Conversão.</b> P1, P3 e P4 já são cláusulas. P2 usa F → A ≡ ¬F ∨ A, que dá {¬F, A}. Conclusão negada: {¬F}.</p>
+        <p><b>3. Cláusulas cruzadas.</b> (3) com (4); (2) com (6); (1) com (5); (1) com (2); (2) com (4); (1) com (9).</p>
+        <p><b>4. Literais complementares.</b> S/¬S, A/¬A, F/¬F, F/¬F, A/¬A e F/¬F, nesta ordem.</p>
+        <p><b>5. Resolventes.</b> {¬A}, {¬F} (igual à cláusula 5), {K}, {K, A}, {¬F, ¬S} e {K, ¬S}.</p>
+        <p><b>6. Cláusula vazia?</b> Não. Depois do sexto passo nenhum par gera resolvente novo.</p>
+        <p><b>7. Satisfatível ou insatisfatível?</b> Satisfatível, com K = V, F = F, A = F e S = V.</p>
+        <p><b>8. Na história.</b> O cofre não foi arrombado. Foi aberto com a chave, e o chefe da segurança está errado.</p>
+      </div>
+    </details>
+
+    <details class="rep">
+      <summary>Modelo de registro preenchido</summary>
+      <div class="rep-body">
+        <pre class="reg" id="reg">DOSSIÊ: 3 · O Cofre do Museu          DUPLA: Larissa R. Gabriel & João V. S. Mendes
+
+1. Símbolos
+   K : o cofre foi aberto com a chave
+   F : o cofre foi arrombado
+   A : o alarme foi desativado
+   S : o segurança estava de plantão
+
+2. Pistas em lógica proposicional
+   (P1) K ∨ F   (P2) F → A   (P3) S   (P4) ¬A ∨ ¬S
+   Conclusão a investigar: F
+
+3. Conversão para FNC
+   P2: F → A ≡ ¬F ∨ A  (P → Q ≡ ¬P ∨ Q)
+   P1, P3 e P4 já são cláusulas.
+
+4. Conjunto de cláusulas
+   (1) {K, F}   (2) {¬F, A}   (3) {S}   (4) {¬A, ¬S}
+   Negação da conclusão: (5) {¬F}
+
+5. Passos de resolução
+   Passo | Cláusulas | Literal cancelado | Resolvente
+   ------+-----------+-------------------+-----------------
+     1   | (3), (4)  | S / ¬S            | (6) {¬A}
+     2   | (2), (6)  | A / ¬A            | {¬F} = (5)
+     3   | (1), (5)  | F / ¬F            | (7) {K}
+     4   | (1), (2)  | F / ¬F            | (8) {K, A}
+     5   | (2), (4)  | A / ¬A            | (9) {¬F, ¬S}
+     6   | (1), (9)  | F / ¬F            | (10) {K, ¬S}
+   Saturado: nenhum resolvente novo.
+
+6. Conclusão
+   [ ] Cláusula vazia encontrada: INSATISFATÍVEL
+   [x] Sem cláusula vazia: SATISFATÍVEL
+       (valoração: K = V, F = F, A = F, S = V)
+   O que isso significa no caso: o cofre não foi arrombado (¬F segue
+   das pistas). Foi aberto com a chave, e a afirmação do chefe da
+   segurança contradiz as evidências.</pre>
+        <div class="copyrow"><button class="btn" type="button" id="btnCopy">Copiar registro</button><span id="copied" role="status"></span></div>
+      </div>
+    </details>
+  </div>
+</section>
+</main>
+
+<footer>
+  <div class="in">Baseado no dossiê 3 da atividade “Detetive: O Caso da Cláusula Vazia”, da Profa. Wilcilene Kowal, Lógica para Computação, IFC São Bento do Sul. <a href="https://wilcilene.github.io/estudos/disciplinas/logica-para-computacao/2027/atividade-clausula-vazia.html" target="_blank" rel="noopener">Ver a atividade original</a>.</div>
+</footer>
+
+<script>
+(function(){
+  var $=function(id){return document.getElementById(id)};
+  var NEG=function(l){return l.charAt(0)==='¬'?l.slice(1):'¬'+l};
+  var key=function(c){return c.slice().sort().join(',')};
+  var kk=function(){return key([].slice.call(arguments))};
+  var fmt=function(c){return c.length?'{'+c.join(', ')+'}':'□'};
+
+  /* cadeado do cofre */
+  (function(){
+    var g=$('ticks'),ns='http://www.w3.org/2000/svg';
+    for(var i=0;i<12;i++){
+      var l=document.createElementNS(ns,'line');
+      l.setAttribute('x1',100);l.setAttribute('x2',100);l.setAttribute('y1',44);l.setAttribute('y2',i%3===0?56:51);
+      l.setAttribute('class','v-tick');l.setAttribute('transform','rotate('+(i*30)+' 100 100)');
+      g.appendChild(l);
+    }
+  })();
+
+  /* ---------- dados ---------- */
+  var CLUES=[
+    {t:'O cofre foi aberto com a chave ou foi arrombado.',f:'K ∨ F',fnc:'Já é uma cláusula.',c:'(1) {K, F}',n:'O “ou” é inclusivo: basta um dos dois ser verdadeiro.'},
+    {t:'Se o cofre foi arrombado, então o alarme foi desativado.',f:'F → A',fnc:'F → A ≡ ¬F ∨ A',c:'(2) {¬F, A}',n:'Quem é negado é o antecedente: P → Q vira {¬P, Q}.'},
+    {t:'O segurança estava de plantão.',f:'S',fnc:'Já é uma cláusula.',c:'(3) {S}',n:'Cláusula unitária: força S a ser verdadeiro.'},
+    {t:'O alarme não foi desativado ou o segurança não estava de plantão.',f:'¬A ∨ ¬S',fnc:'Já é uma cláusula. Equivale a ¬(A ∧ S), por De Morgan.',c:'(4) {¬A, ¬S}',n:'Traduz “o alarme só é desligado na troca de turno”: alarme desligado e segurança de plantão não acontecem juntos.'}
+  ];
+  var BASE=[['K','F'],['¬F','A'],['S'],['¬A','¬S']];
+  var NL={};
+  NL[kk('¬A')]='O segurança estava de plantão e o alarme só é desligado fora do plantão: o alarme não foi desativado.';
+  NL[kk('¬F')]='Arrombar exigiria desativar o alarme, e ele não foi desativado: o cofre não foi arrombado.';
+  NL[kk('K')]='Foi com a chave ou foi arrombado, e não foi arrombado: o cofre foi aberto com a chave.';
+  NL[kk('K','A')]='Ou foi com a chave, ou o alarme foi desativado (porque arrombar exige desativá-lo).';
+  NL[kk('¬F','¬S')]='Se foi arrombado, o alarme foi desativado, e isso só ocorre fora do plantão: arrombamento implica segurança fora do plantão.';
+  NL[kk('K','¬S')]='Ou foi com a chave, ou o segurança não estava de plantão.';
+  var STEPS=[
+    [kk('S'),kk('¬A','¬S')],
+    [kk('¬F','A'),kk('¬A')],
+    [kk('K','F'),kk('¬F')],
+    [kk('K','F'),kk('¬F','A')],
+    [kk('¬F','A'),kk('¬A','¬S')],
+    [kk('K','F'),kk('¬F','¬S')]
+  ];
+
+  /* ---------- estado ---------- */
+  var S,V={K:false,F:true,A:true,S:true,done:false},seen={};
+  function fresh(){
+    S={clauses:BASE.map(function(l,i){return {id:i+1,l:l.slice()}}),next:5,log:[],neg:false,sat:false,sel:[],hint:[]};
+  }
+  fresh();
+  var byId=function(id){return S.clauses.filter(function(c){return c.id===id})[0]};
+  var byKey=function(k){return S.clauses.filter(function(c){return key(c.l)===k})[0]};
+
+  function resolve(a,b){
+    var ps=a.l.filter(function(x){return b.l.indexOf(NEG(x))>=0});
+    if(!ps.length)return {err:'none'};
+    if(ps.length>1)return {err:'multi',ps:ps};
+    var L=ps[0],NL_=NEG(L);
+    var res=a.l.filter(function(x){return x!==L}).concat(b.l.filter(function(x){return x!==NL_}));
+    res=res.filter(function(x,i){return res.indexOf(x)===i});
+    return {L:L,res:res};
+  }
+  function candidates(){
+    var out=[],seenK={},cs=S.clauses;
+    for(var i=0;i<cs.length;i++)for(var j=i+1;j<cs.length;j++){
+      var r=resolve(cs[i],cs[j]);
+      if(r.err)continue;
+      var k=key(r.res);
+      if(byKey(k)||seenK[k])continue;
+      seenK[k]=1;out.push({a:cs[i].id,b:cs[j].id,res:r.res});
+    }
+    return out;
+  }
+
+  function say(type,text){var m=$('msg');m.className='msg '+type;m.textContent=text;return false}
+
+  function apply(aId,bId,quiet){
+    var a=byId(aId),b=byId(bId);
+    if(!a||!b||a===b)return say('warn','Escolha duas cláusulas diferentes.');
+    var r=resolve(a,b);
+    if(r.err==='none')return say('bad','Não há literal complementar entre ('+a.id+') e ('+b.id+'), então não existe resolvente. Juntar as duas cláusulas não é resolução.');
+    if(r.err==='multi')return say('bad','Há dois pares complementares ('+r.ps.join(', ')+'). Cancelar um par por vez só gera uma cláusula sempre verdadeira, inútil para a busca.');
+    var dupLog=S.log.filter(function(e){return (e.a===a.id&&e.b===b.id)||(e.a===b.id&&e.b===a.id)})[0];
+    if(dupLog)return say('warn','Esse cruzamento já está no registro (passo '+dupLog.n+').');
+    var k=key(r.res),dup=byKey(k);
+    var e={n:S.log.length+1,a:a.id,b:b.id,L:r.L,res:r.res,k:k};
+    if(dup){e.dup=dup.id}else{e.id=S.next++;S.clauses.push({id:e.id,l:r.res.slice(),derived:true,fresh:true})}
+    S.log.push(e);S.sat=false;S.sel=[];S.hint=[];
+    if(!quiet){
+      if(!r.res.length)say('ok','Surgiu □: as pistas são incompatíveis.');
+      else if(dup)say('ok','Passo '+e.n+': o resolvente '+fmt(r.res)+' já existe como ('+dup.id+'). Ficou registrado e não entra de novo no conjunto.');
+      else say('ok','Passo '+e.n+': resolvente '+fmt(r.res)+' acrescentado como ('+e.id+').');
+    }
+    render();return true;
+  }
+
+  function negate(){
+    if(S.neg)return;
+    var ex=byKey(kk('¬F'));
+    S.neg=true;
+    if(ex){say('ok','A negação {¬F} já tinha sido derivada como ('+ex.id+'), então a conclusão negada já está no conjunto.')}
+    else{S.clauses.push({id:S.next++,l:['¬F'],neg:true});say('ok','Negação acrescentada: ('+(S.next-1)+') {¬F}. Agora procure □.')}
+    S.sat=false;render();
+  }
+
+  function hintStep(){
+    if(!S.neg){S.hint=[];return say('warn','Comece negando a conclusão.'),render()}
+    for(var i=0;i<STEPS.length;i++){
+      var a=byKey(STEPS[i][0]),b=byKey(STEPS[i][1]);
+      if(!a||!b)continue;
+      var done=S.log.some(function(e){return (e.a===a.id&&e.b===b.id)||(e.a===b.id&&e.b===a.id)});
+      if(done)continue;
+      var r=resolve(a,b);if(r.err)continue;
+      S.hint=[a.id,b.id];say('warn','Tente cruzar ('+a.id+') com ('+b.id+').');return render();
+    }
+    var c=candidates();
+    if(c.length){S.hint=[c[0].a,c[0].b];say('warn','Tente cruzar ('+c[0].a+') com ('+c[0].b+').')}
+    else{S.hint=[];say('warn','Nenhum cruzamento novo à vista. Use “Verificar saturação”.')}
+    render();
+  }
+
+  function checkSat(){
+    if(!S.neg)return say('warn','Antes de saturar, acrescente a negação da conclusão.');
+    if(S.clauses.some(function(c){return !c.l.length}))return say('ok','Há □ no conjunto: as pistas são incompatíveis.');
+    var c=candidates();
+    if(!c.length){S.sat=true;say('ok','Saturado: nenhum par gera resolvente novo e □ não apareceu. O conjunto final tem '+S.clauses.length+' cláusulas, então o caso é satisfatível.')}
+    else{S.sat=false;say('warn','Ainda surgem '+c.length+' resolvente'+(c.length>1?'s':'')+' novo'+(c.length>1?'s':'')+'. Continue cruzando; a dica ajuda.')}
+    render();
+  }
+
+  function auto(){
+    fresh();
+    S.clauses.push({id:S.next++,l:['¬F'],neg:true});S.neg=true;
+    STEPS.forEach(function(s){var a=byKey(s[0]),b=byKey(s[1]);if(a&&b)apply(a.id,b.id,true)});
+    S.clauses.forEach(function(c){c.fresh=false});
+    S.sat=!candidates().length;
+    say('ok','Solução completa: 6 passos, '+S.clauses.length+' cláusulas, nenhum resolvente novo e nenhum □.');
+    render();
+  }
+
+  /* ---------- objetivos ---------- */
+  function objectives(){
+    var n=0;for(var k in seen)n++;
+    var d={};S.log.forEach(function(e){d[e.k]=1});
+    return [
+      {ok:n===4,t:'Examinar as 4 pistas',s:n+' de 4'},
+      {ok:S.neg,t:'Negar a conclusão',s:'Acrescentar {¬F} ao conjunto'},
+      {ok:!!(d['¬A']&&d['¬F']&&d['K']),t:'Derivar {¬A}, {¬F} e {K}',s:'Pela regra de resolução'},
+      {ok:S.sat,t:'Saturar o conjunto',s:'Nenhum resolvente novo, sem □'},
+      {ok:V.done,t:'Achar a valoração',s:'Todas as cláusulas verdadeiras'}
+    ];
+  }
+
+  /* ---------- renderização ---------- */
+  function renderHud(){
+    var o=objectives(),n=o.filter(function(x){return x.ok}).length;
+    var st='';for(var i=0;i<5;i++)st+='<span class="star'+(i<n?' on':'')+'">★</span>';
+    $('stars').innerHTML=st;$('count').textContent=n+'/5';$('bar').style.width=(n*20)+'%';
+    $('goals').innerHTML=o.map(function(x){return '<li class="'+(x.ok?'done':'')+'"><span class="ck" aria-hidden="true">✓</span><span>'+x.t+'<small>'+x.s+'</small></span></li>'}).join('');
+    var on=n===5,sb=$('stampbox');
+    sb.className='stampbox'+(on?' on':'');
+    $('stamp').innerHTML=on?'<small>Caso nº 03</small>Sem contradição':'<small>Investigação</small>em andamento';
+    $('stampnote').textContent=on?'Cinco estrelas. As pistas são compatíveis e o cofre não foi arrombado.':'Cumpra os cinco objetivos para carimbar o caso.';
+  }
+
+  function renderLab(){
+    $('clauses').innerHTML=S.clauses.map(function(c){
+      var tag=c.neg?'negação':c.derived?'derivada':'pista';
+      var cls='cl'+(S.sel.indexOf(c.id)>=0?' sel':'')+(S.hint.indexOf(c.id)>=0?' hint':'')+(c.neg?' neg':'')+(c.fresh?' new':'');
+      return '<button type="button" class="'+cls+'" data-id="'+c.id+'" aria-pressed="'+(S.sel.indexOf(c.id)>=0)+'"><span class="id">Cláusula ('+c.id+') · <i>'+tag+'</i></span><span class="lits">'+fmt(c.l)+'</span></button>';
+    }).join('');
+    S.clauses.forEach(function(c){c.fresh=false});
+    var pb=$('pairbox'),sel=S.sel;
+    if(sel.length<2){pb.textContent=sel.length?'Escolha a segunda cláusula.':'Escolha duas cláusulas para cruzar.'}
+    else{
+      var a=byId(sel[0]),b=byId(sel[1]),r=resolve(a,b);
+      pb.textContent=r.err==='none'?'Sem par complementar entre ('+a.id+') e ('+b.id+').':r.err==='multi'?'Dois pares complementares ('+r.ps.join(' e ')+'). Não dá para cancelar os dois de uma vez.':'Par complementar: '+r.L+' e '+NEG(r.L)+'. Pode aplicar a resolução.';
+    }
+    $('btnApply').disabled=sel.length<2;
+    $('btnNeg').disabled=S.neg;
+    $('logbody').innerHTML=S.log.length?S.log.map(function(e){
+      var a=byId(e.a),b=byId(e.b);
+      var res=e.res.length?fmt(e.res):'□';
+      var out=e.dup?res+' = ('+e.dup+')':'('+e.id+') '+res;
+      var nl=NL[e.k]||'';
+      return '<tr><td>'+e.n+'</td><td class="m">('+a.id+') '+fmt(a.l)+' e ('+b.id+') '+fmt(b.l)+'</td><td class="m">'+e.L+' / '+NEG(e.L)+'</td><td class="m">'+out+'</td><td class="nl">'+nl+'</td></tr>';
+    }).join(''):'<tr><td class="empty" colspan="5">Nenhum passo ainda. Selecione duas cláusulas e aplique a resolução.</td></tr>';
+  }
+
+  var VARS=[['K','o cofre foi aberto com a chave'],['F','o cofre foi arrombado'],['A','o alarme foi desativado'],['S','o segurança estava de plantão']];
+  var CL=[
+    {n:1,l:['K','F'],name:'Pista 1',p:'O cofre foi aberto com a chave ou foi arrombado.',bad:'o cofre não foi aberto nem com a chave nem arrombado, mas foi encontrado aberto.'},
+    {n:2,l:['¬F','A'],name:'Pista 2',p:'Se o cofre foi arrombado, então o alarme foi desativado.',bad:'houve arrombamento sem o alarme ter sido desativado.'},
+    {n:3,l:['S'],name:'Pista 3',p:'O segurança estava de plantão.',bad:'o segurança não estava de plantão, contra o que a pista 3 afirma.'},
+    {n:4,l:['¬A','¬S'],name:'Pista 4',p:'O alarme não foi desativado ou o segurança não estava de plantão.',bad:'o alarme foi desativado com o segurança de plantão, e a pista 4 diz que isso só ocorre na troca de turno.'},
+    {n:5,l:['¬F'],name:'Negação da conclusão',p:'O cofre não foi arrombado.',bad:'houve arrombamento, mas a conclusão negada exige que não tenha havido.'}
+  ];
+  var litVal=function(l,v){return l.charAt(0)==='¬'?!v[l.slice(1)]:!!v[l]};
+  var clVal=function(c,v){return c.l.some(function(l){return litVal(l,v)})};
+
+  function renderVal(){
+    $('switches').innerHTML=VARS.map(function(x){
+      var on=V[x[0]];
+      return '<button type="button" class="sw" role="switch" aria-checked="'+on+'" data-v="'+x[0]+'"><b>'+x[0]+'</b><span>'+x[1]+'</span><em>'+(on?'V':'F')+'</em></button>';
+    }).join('');
+    var bad=0;
+    $('chk').innerHTML=CL.map(function(c){
+      var ok=clVal(c,V);if(!ok)bad++;
+      var lits=c.l.map(function(l){return '<span class="lit'+(litVal(l,V)?' t':'')+'">'+l+'</span>'}).join('');
+      return '<div class="cr'+(ok?' ok':'')+'"><div class="lb"><small>('+c.n+')</small>'+lits+'</div><span class="st">'+(ok?'Verdadeira':'Falsa')+'</span></div>';
+    }).join('');
+    var vd=$('verd');
+    if(!bad){V.done=true;vd.className='verd ok';vd.textContent='Todas as cláusulas são verdadeiras: esta valoração satisfaz o conjunto, então não há contradição.'}
+    else{vd.className='verd';vd.textContent=bad===1?'Uma cláusula ficou falsa. Esta valoração não serve.':bad+' cláusulas ficaram falsas. Esta valoração não serve.'}
+    renderTT();
+  }
+
+  var openRows={9:true};
+  var WORLD={
+    K:['o cofre não foi aberto com a chave','o cofre foi aberto com a chave'],
+    F:['o cofre não foi arrombado','o cofre foi arrombado'],
+    A:['o alarme não foi desativado','o alarme foi desativado'],
+    S:['o segurança não estava de plantão','o segurança estava de plantão']
+  };
+  function litTxt(l,v){
+    var ng=l.charAt(0)==='¬',a=ng?l.slice(1):l,x=!!v[a];
+    return ng?'<code>'+l+'</code> é '+(x?'F':'V')+', pois '+a+' é '+(x?'V':'F'):'<code>'+l+'</code> é '+(x?'V':'F');
+  }
+  function explainRow(v){
+    var world=['K','F','A','S'].map(function(a){return WORLD[a][v[a]?1:0]}).join('; ');
+    var bad=[];
+    var items=CL.map(function(c){
+      var ok=clVal(c,v),tl=c.l.filter(function(l){return litVal(l,v)});
+      if(!ok)bad.push(c.n);
+      var body='Literais: '+c.l.map(function(l){return litTxt(l,v)}).join('; ')+'. ';
+      body+=ok?(tl.length===1?'Só o literal <code>'+tl[0]+'</code> é verdadeiro, e um basta.':'Os literais verdadeiros são '+tl.map(function(l){return '<code>'+l+'</code>'}).join(' e ')+', e um basta.'):'Nenhum literal é verdadeiro, então a cláusula é falsa.';
+      return '<div class="ex-i '+(ok?'ok':'no')+'"><div class="ex-t"><strong>('+c.n+') '+fmt(c.l)+'</strong><span class="ex-n">'+c.name+'</span><span class="st">'+(ok?'Verdadeira':'Falsa')+'</span></div><p class="ex-q">“'+c.p+'”</p><p>'+body+'</p>'+(ok?'':'<p class="ex-b">Na história: '+c.bad+'</p>')+'</div>';
+    });
+    var verdict=bad.length
+      ?'Esta linha não serve. '+(bad.length>1?'Ficam falsas as cláusulas ':'Fica falsa a cláusula ')+bad.map(function(n){return '('+n+')'}).join(', ').replace(/, ([^,]*)$/,' e $1')+', e basta uma falsa para o mundo contradizer as pistas.'
+      :'As cinco cláusulas são verdadeiras, então esta valoração satisfaz o conjunto. É a única das 16 linhas em que isso acontece, e é a mesma valoração que a cadeia de resolução forçou.';
+    return '<div class="expl"><p><b>Mundo desta linha:</b> '+world+'.</p>'+items.join('')+'<p class="ex-v '+(bad.length?'no':'ok')+'">'+verdict+'</p></div>';
+  }
+  function renderTT(){
+    var h='<thead><tr><th>K</th><th>F</th><th>A</th><th>S</th><th>(1)</th><th>(2)</th><th>(3)</th><th>(4)</th><th>(5)</th><th><span class="sr">Explicação</span></th></tr></thead><tbody>';
+    for(var m=0;m<16;m++){
+      var v={K:!!(m&8),F:!!(m&4),A:!!(m&2),S:!!(m&1)};
+      var res=CL.map(function(c){return clVal(c,v)});
+      var all=res.every(Boolean);
+      var cur=(v.K===V.K&&v.F===V.F&&v.A===V.A&&v.S===V.S);
+      var op=!!openRows[m];
+      h+='<tr data-m="'+m+'" tabindex="0" aria-expanded="'+op+'" class="'+(all?'model':'')+(cur?' cur':'')+(op?' open':'')+'">'+
+        ['K','F','A','S'].map(function(x){return '<td>'+(v[x]?'V':'F')+'</td>'}).join('')+
+        res.map(function(r){return '<td class="'+(all?'':(r?'yes':'no'))+'">'+(r?'V':'F')+'</td>'}).join('')+
+        '<td class="car" aria-hidden="true">'+(op?'▾':'▸')+'</td></tr>';
+      if(op)h+='<tr class="exp"><td class="exp-c" colspan="10">'+explainRow(v)+'</td></tr>';
+    }
+    $('tt').innerHTML=h+'</tbody>';
+  }
+  function toggleRow(m){
+    openRows[m]=!openRows[m];renderTT();
+    var r=document.querySelector('#tt tr[data-m="'+m+'"]');if(r)r.focus();
+  }
+
+  function renderClues(){
+    $('evgrid').innerHTML=CLUES.map(function(c,i){
+      return '<article class="ev'+(seen[i]?' seen':'')+'" id="ev'+i+'"><div class="ev-top"><span class="tent" aria-hidden="true">'+(i+1)+'</span><div class="ev-txt"><span class="badge">Pista coletada</span><p><b style="font-family:var(--f-display);letter-spacing:.1em;text-transform:uppercase;color:var(--gold);font-weight:700">Pista '+(i+1)+'.</b> '+c.t+'</p></div></div>'+
+        '<button type="button" class="btn ghost ev-btn" data-i="'+i+'" aria-expanded="false">Examinar pista</button>'+
+        '<div class="ev-detail"><div class="row"><span>Em lógica</span><code>'+c.f+'</code></div><div class="row"><span>Para FNC</span><code>'+c.fnc+'</code></div><div class="row"><span>Cláusula</span><code>'+c.c+'</code></div><p class="note">'+c.n+'</p></div></article>';
+    }).join('');
+  }
+
+  function render(){renderLab();renderVal();renderHud()}
+
+  /* ---------- eventos ---------- */
+  $('evgrid').addEventListener('click',function(e){
+    var b=e.target.closest('.ev-btn');if(!b)return;
+    var i=+b.getAttribute('data-i'),card=$('ev'+i),open=!card.classList.contains('open');
+    card.classList.toggle('open',open);card.classList.add('seen');seen[i]=1;
+    b.setAttribute('aria-expanded',open);b.textContent=open?'Fechar pista':'Examinar pista';
+    renderHud();
+  });
+  $('clauses').addEventListener('click',function(e){
+    var b=e.target.closest('.cl');if(!b)return;
+    var id=+b.getAttribute('data-id'),i=S.sel.indexOf(id);
+    if(i>=0)S.sel.splice(i,1);else{S.sel.push(id);if(S.sel.length>2)S.sel.shift()}
+    S.hint=[];renderLab();
+  });
+  $('btnApply').onclick=function(){if(S.sel.length===2)apply(S.sel[0],S.sel[1])};
+  $('btnNeg').onclick=negate;
+  $('btnHint').onclick=hintStep;
+  $('btnSat').onclick=checkSat;
+  $('btnAuto').onclick=auto;
+  $('btnReset').onclick=function(){fresh();say('warn','Conjunto reiniciado com as quatro pistas.');render()};
+  $('switches').addEventListener('click',function(e){
+    var b=e.target.closest('.sw');if(!b)return;
+    var k=b.getAttribute('data-v');V[k]=!V[k];renderVal();renderHud();
+    var nb=document.querySelector('.sw[data-v="'+k+'"]');if(nb)nb.focus();
+  });
+  $('pChief').onclick=function(){V.K=false;V.F=true;V.A=true;V.S=true;renderVal();renderHud()};
+  $('pFalse').onclick=function(){V.K=false;V.F=false;V.A=false;V.S=false;renderVal();renderHud()};
+  $('tt').addEventListener('click',function(e){
+    var r=e.target.closest('tr[data-m]');if(r)toggleRow(+r.getAttribute('data-m'));
+  });
+  $('tt').addEventListener('keydown',function(e){
+    if(e.key!=='Enter'&&e.key!==' ')return;
+    var r=e.target.closest('tr[data-m]');
+    if(r){e.preventDefault();toggleRow(+r.getAttribute('data-m'))}
+  });
+  $('btnCopy').onclick=function(){
+    var pre=$('reg'),out=$('copied');
+    var fallback=function(){var r=document.createRange();r.selectNodeContents(pre);var s=window.getSelection();s.removeAllRanges();s.addRange(r);out.textContent='Texto selecionado. Copie com Ctrl+C.'};
+    try{navigator.clipboard.writeText(pre.textContent).then(function(){out.textContent='Registro copiado.'},fallback)}catch(err){fallback()}
+  };
+
+  renderClues();
+  render();
+  say('warn','Selecione duas cláusulas, ou comece negando a conclusão.');
+})();
+</script>
+
+</body></html>
